@@ -12,13 +12,14 @@ import java.io.ObjectInputStream;
 import java.net.Socket;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.JOptionPane;
 
 /**
  *
  * @author manoelaugusto
  */
 public class ClienteFrame extends javax.swing.JFrame {
-    
+
     private Socket socket;
     private ChatMessage message;
     private ClienteService service;
@@ -29,39 +30,39 @@ public class ClienteFrame extends javax.swing.JFrame {
     public ClienteFrame() {
         initComponents();
     }
-    
+
     private class ListenerSocket implements Runnable {
-        
+
         private ObjectInputStream input;
-        
+
         public ListenerSocket(Socket socket) {
             try {
                 this.input = new ObjectInputStream(socket.getInputStream());
             } catch (IOException ex) {
                 Logger.getLogger(ClienteFrame.class.getName()).log(Level.SEVERE, null, ex);
             }
-            
+
         }
-        
+
         @Override
         public void run() {
             ChatMessage message = null;
             try {
-                
+
                 while ((message = (ChatMessage) input.readObject()) != null) {
                     Action action = message.getAction();
-                    
+
                     if (action.equals(Action.CONNECT)) {
                         connect(message);
-                        
+
                     } else if (action.equals(Action.DISCONNECT)) {
-                        disconnect(message);
-                        
+                        disconnect();
+
                     } else if (action.equals(Action.SEND_ONE)) {
                         receive(message);
                     } else if (action.equals(Action.USER_ONLINE)) {
                         refreshOnline(message);
-                        
+
                     }
                 }
             } catch (IOException ex) {
@@ -70,24 +71,58 @@ public class ClienteFrame extends javax.swing.JFrame {
                 Logger.getLogger(ClienteFrame.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
-        
+
     }
 
     private void connect(ChatMessage message) {
-          this.txtAreaReceive.append(message.getName() + "\n"); 
+        if (message.getText().equals("No")) {
+            this.txtName.setText("");
+            JOptionPane.showMessageDialog(this, "Conexão não estabelecida,\n tente novamente com um novo nome");
+            return;
+        }
+
+        this.message = message;
+        this.btnConectar.setEnabled(false);
+        this.txtName.setEditable(false);
+
+        this.btnSair.setEnabled(true);
+        this.txtAreaSend.setEnabled(true);
+        this.txtAreaReceive.setEnabled(true);
+        this.btnEnviar.setEnabled(true);
+        this.btnLimpar.setEnabled(true);
+        this.btnAtualizar.setEnabled(true);
+
+        JOptionPane.showMessageDialog(this, "Conexão realizada com sucesso na sala!");
+
     }
 
-    private void disconnect(ChatMessage message) {
-        
+    private void disconnect() {
+        try {
+            this.socket.close();
+            this.btnConectar.setEnabled(true);
+            this.txtName.setEnabled(true);
+
+            this.btnSair.setEnabled(false);
+            this.txtAreaSend.setEnabled(false);
+            this.txtAreaReceive.setEnabled(false);
+            this.btnEnviar.setEnabled(false);
+            this.btnLimpar.setEnabled(false);
+            this.btnAtualizar.setEnabled(false);
+
+            JOptionPane.showConfirmDialog(this, "Você saiu da sala!");
+        } catch (IOException ex) {
+            Logger.getLogger(ClienteFrame.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
     }
 
     private void receive(ChatMessage message) {
-        this.txtAreaReceive.append(message.getName() + "\n");
-        
+        this.txtAreaReceive.append(message.getName() + " diz: " + message.getText() + "\n");
+
     }
 
     private void refreshOnline(ChatMessage message) {
-        
+
     }
 
     /**
@@ -111,7 +146,7 @@ public class ClienteFrame extends javax.swing.JFrame {
         jScrollPane1 = new javax.swing.JScrollPane();
         txtAreaReceive = new javax.swing.JTextArea();
         jScrollPane2 = new javax.swing.JScrollPane();
-        txtSend = new javax.swing.JTextArea();
+        txtAreaSend = new javax.swing.JTextArea();
         btnEnviar = new javax.swing.JButton();
         btnLimpar = new javax.swing.JButton();
 
@@ -127,6 +162,7 @@ public class ClienteFrame extends javax.swing.JFrame {
         });
 
         btnSair.setText("Sair");
+        btnSair.setEnabled(false);
         btnSair.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnSairActionPerformed(evt);
@@ -157,6 +193,7 @@ public class ClienteFrame extends javax.swing.JFrame {
         jPanel2.setBorder(javax.swing.BorderFactory.createTitledBorder("Online"));
 
         btnAtualizar.setText("Atualizar");
+        btnAtualizar.setEnabled(false);
         btnAtualizar.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnAtualizarActionPerformed(evt);
@@ -192,15 +229,19 @@ public class ClienteFrame extends javax.swing.JFrame {
 
         jPanel3.setBorder(new javax.swing.border.SoftBevelBorder(javax.swing.border.BevelBorder.RAISED));
 
+        txtAreaReceive.setEditable(false);
         txtAreaReceive.setColumns(20);
         txtAreaReceive.setRows(5);
+        txtAreaReceive.setEnabled(false);
         jScrollPane1.setViewportView(txtAreaReceive);
 
-        txtSend.setColumns(20);
-        txtSend.setRows(5);
-        jScrollPane2.setViewportView(txtSend);
+        txtAreaSend.setColumns(20);
+        txtAreaSend.setRows(5);
+        txtAreaSend.setEnabled(false);
+        jScrollPane2.setViewportView(txtAreaSend);
 
         btnEnviar.setText("Enviar");
+        btnEnviar.setEnabled(false);
         btnEnviar.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnEnviarActionPerformed(evt);
@@ -208,6 +249,7 @@ public class ClienteFrame extends javax.swing.JFrame {
         });
 
         btnLimpar.setText("Limpar");
+        btnLimpar.setEnabled(false);
         btnLimpar.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnLimparActionPerformed(evt);
@@ -271,23 +313,26 @@ public class ClienteFrame extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnSairActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSairActionPerformed
-        // TODO add your handling code here:
+        this.message.setAction(Action.DISCONNECT);
+        this.service.send(this.message);
+        disconnect();
+        
     }//GEN-LAST:event_btnSairActionPerformed
 
     private void btnConectarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnConectarActionPerformed
         String name = this.txtName.getText();
-        
+
         if (!name.isEmpty()) {
             this.message = new ChatMessage();
             this.message.setAction(Action.CONNECT);
             this.message.setName(name);
-            
+
             if (this.socket == null) {
                 this.service = new ClienteService();
                 this.socket = this.service.connect();
-                
+
                 new Thread(new ListenerSocket(this.socket)).start();
-                
+
             }
             this.service.send(message);
         }
@@ -320,7 +365,7 @@ public class ClienteFrame extends javax.swing.JFrame {
     private javax.swing.JScrollPane jScrollPane3;
     private javax.swing.JList<String> listOnlines;
     private javax.swing.JTextArea txtAreaReceive;
+    private javax.swing.JTextArea txtAreaSend;
     private javax.swing.JTextField txtName;
-    private javax.swing.JTextArea txtSend;
     // End of variables declaration//GEN-END:variables
 }

@@ -5,6 +5,7 @@
 package com.chatsocket.redes.app.service;
 
 import com.chatsocket.redes.app.bean.ChatMessage;
+import com.chatsocket.redes.app.bean.ChatMessage.Action;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -12,6 +13,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -29,7 +32,9 @@ public class ServidorService {
 
             while (true) {
                 socket = serverSocket.accept();
+                
                 new Thread(new ListenerSocket(socket)).start();
+                
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -65,10 +70,14 @@ public class ServidorService {
                         }
 
                     } else if (action.equals(ChatMessage.Action.DISCONNECT)) {
+                        disconnect(message, output);
 
                     } else if (action.equals(ChatMessage.Action.SEND_ONE)) {
-
+                        sendOne(message, output);
+                        
+                      
                     } else if (action.equals(ChatMessage.Action.SEND_ALL)) {
+                        sendAll(message);
 
                     } else if (action.equals(ChatMessage.Action.USER_ONLINE)) {
 
@@ -76,6 +85,7 @@ public class ServidorService {
 
                 }
             } catch (IOException e) {
+                disconnect(message, output);
                 throw new RuntimeException(e);
             } catch (ClassNotFoundException e) {
                 throw new RuntimeException(e);
@@ -105,6 +115,23 @@ public class ServidorService {
 
         return false;
     }
+    
+    private void disconnect(ChatMessage message, ObjectOutputStream output){
+        mapOnlines.remove(message.getName());
+        
+        
+        message.setText("Deixou a sala!");
+        
+        message.setAction(Action.SEND_ONE);
+        
+        sendAll (message);
+        
+        System.out.println("Usuario: " + message.getName() + " saiu da sala");
+        
+    
+    
+    
+    }
 
     private void sendOne(ChatMessage message, ObjectOutputStream output) {
         try {
@@ -113,4 +140,20 @@ public class ServidorService {
             throw new RuntimeException(e);
         }
     }
+    private void sendAll(ChatMessage message) {
+        for(Map.Entry<String, ObjectOutputStream> kv : mapOnlines.entrySet()){
+        if(!kv.getKey().equals(message.getName())){
+            try {
+                kv.getValue().writeObject(message);
+            } catch (IOException ex) {
+                Logger.getLogger(ServidorService.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            
+        }
+        
+        
+        }
+        
+    }
 }
+        

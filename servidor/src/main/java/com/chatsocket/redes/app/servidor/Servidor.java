@@ -5,13 +5,18 @@
 package com.chatsocket.redes.app.servidor;
 
 import com.chatsocket.redes.app.service.ServidorService;
+import java.time.ZonedDateTime;
+import java.util.TimeZone;
 
 /**
  *
  * @author manoelaugusto
  */
 public class Servidor {
+
     public static void main(String[] args) {
+        
+        System.out.println("Servidor funcionando!" + ZonedDateTime.now());
         new ServidorService();
 
     }
