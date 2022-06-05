@@ -79,18 +79,18 @@ public class ServidorService {
                         return;
 
                     } else if (action.equals(ChatMessage.Action.SEND_ONE)) {
-                        sendOne(message, output);
+                        sendOne(message);
 
                     } else if (action.equals(ChatMessage.Action.SEND_ALL)) {
                         sendAll(message);
-
-                    } else if (action.equals(ChatMessage.Action.USER_ONLINE)) {
-
                     }
 
                 }
             } catch (IOException e) {
+                ChatMessage cm = new ChatMessage();
+                cm.setName(message.getName());
                 disconnect(message, output);
+                sendOnlines();
                 System.out.println(message.getName() + " deixou a sala");
             } catch (ClassNotFoundException e) {
                 throw new RuntimeException(e);
@@ -102,18 +102,18 @@ public class ServidorService {
     private boolean connect(ChatMessage message, ObjectOutputStream output) {
         if (mapOnlines.size() == 0) {
             message.setText("Yes");
-            sendOne(message, output);
+            send(message, output);
             return true;
         }
         for (Map.Entry<String, ObjectOutputStream> kv : mapOnlines.entrySet()) {
             if (kv.getKey().equals(message.getName())) {
                 message.setText("No");
-                sendOne(message, output);
+                send(message, output);
 
                 return false;
             } else {
                 message.setText("Yes");
-                sendOne(message, output);
+                send(message, output);
                 return true;
             }
         }
@@ -134,11 +134,23 @@ public class ServidorService {
 
     }
 
-    private void sendOne(ChatMessage message, ObjectOutputStream output) {
+    private void send(ChatMessage message, ObjectOutputStream output) {
         try {
             output.writeObject(message);
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    private void sendOne(ChatMessage message) {
+        for (Map.Entry<String, ObjectOutputStream> kv : mapOnlines.entrySet()) {
+            if (kv.getKey().equals(message.getNameReseverd())) {
+                try {
+                    kv.getValue().writeObject(message);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
         }
     }
 
