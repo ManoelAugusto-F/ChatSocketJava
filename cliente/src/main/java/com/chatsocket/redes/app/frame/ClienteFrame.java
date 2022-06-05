@@ -10,9 +10,12 @@ import com.chatsocket.redes.app.service.ClienteService;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.net.Socket;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.JList;
 import javax.swing.JOptionPane;
+import javax.swing.ListSelectionModel;
 
 /**
  *
@@ -56,13 +59,13 @@ public class ClienteFrame extends javax.swing.JFrame {
                         connect(message);
 
                     } else if (action.equals(Action.DISCONNECT)) {
-                        disconnect();
+                        disconnected();
+                        socket.close();
 
                     } else if (action.equals(Action.SEND_ONE)) {
                         receive(message);
                     } else if (action.equals(Action.USER_ONLINE)) {
                         refreshOnline(message);
-
                     }
                 }
             } catch (IOException ex) {
@@ -90,38 +93,41 @@ public class ClienteFrame extends javax.swing.JFrame {
         this.txtAreaReceive.setEnabled(true);
         this.btnEnviar.setEnabled(true);
         this.btnLimpar.setEnabled(true);
-        this.btnAtualizar.setEnabled(true);
 
         JOptionPane.showMessageDialog(this, "Conexão realizada com sucesso na sala!");
 
     }
 
-    private void disconnect() {
-        try {
-            this.socket.close();
-            this.btnConectar.setEnabled(true);
-            this.txtName.setEnabled(true);
+    private void disconnected() {
 
-            this.btnSair.setEnabled(false);
-            this.txtAreaSend.setEnabled(false);
-            this.txtAreaReceive.setEnabled(false);
-            this.btnEnviar.setEnabled(false);
-            this.btnLimpar.setEnabled(false);
-            this.btnAtualizar.setEnabled(false);
+        this.btnConectar.setEnabled(true);
+        this.txtName.setEnabled(true);
 
-            JOptionPane.showConfirmDialog(this, "Você saiu da sala!");
-        } catch (IOException ex) {
-            Logger.getLogger(ClienteFrame.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        this.btnSair.setEnabled(false);
+        this.txtAreaSend.setEnabled(false);
+        this.txtAreaReceive.setEnabled(false);
+        this.btnEnviar.setEnabled(false);
+        this.btnLimpar.setEnabled(false);
+        
+        this.txtAreaReceive.setText("");
+        this.txtAreaSend.setText("");
+
+        JOptionPane.showConfirmDialog(this, "Você saiu da sala!");
 
     }
 
     private void receive(ChatMessage message) {
-        this.txtAreaReceive.append(message.getName() + " diz: " + message.getText() + "\n");
+        this.txtAreaReceive.append(message.getName() + "  diz:  " + message.getText() + " \n ");
 
     }
 
     private void refreshOnline(ChatMessage message) {
+        Set<String> names = message.getSetOnline();
+
+        String[] array = names.toArray(new String[names.size()]);
+        this.listOnlines.setListData(array);
+        this.listOnlines.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        this.listOnlines.setLayoutOrientation(JList.VERTICAL);
 
     }
 
@@ -139,7 +145,6 @@ public class ClienteFrame extends javax.swing.JFrame {
         btnConectar = new javax.swing.JButton();
         btnSair = new javax.swing.JButton();
         jPanel2 = new javax.swing.JPanel();
-        btnAtualizar = new javax.swing.JButton();
         jScrollPane3 = new javax.swing.JScrollPane();
         listOnlines = new javax.swing.JList<>();
         jPanel3 = new javax.swing.JPanel();
@@ -192,14 +197,6 @@ public class ClienteFrame extends javax.swing.JFrame {
 
         jPanel2.setBorder(javax.swing.BorderFactory.createTitledBorder("Online"));
 
-        btnAtualizar.setText("Atualizar");
-        btnAtualizar.setEnabled(false);
-        btnAtualizar.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btnAtualizarActionPerformed(evt);
-            }
-        });
-
         listOnlines.setModel(new javax.swing.AbstractListModel<String>() {
             String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
             public int getSize() { return strings.length; }
@@ -213,18 +210,14 @@ public class ClienteFrame extends javax.swing.JFrame {
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel2Layout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(btnAtualizar, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jScrollPane3))
-                .addContainerGap(11, Short.MAX_VALUE))
+                .addComponent(jScrollPane3, javax.swing.GroupLayout.DEFAULT_SIZE, 89, Short.MAX_VALUE)
+                .addContainerGap())
         );
         jPanel2Layout.setVerticalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel2Layout.createSequentialGroup()
+            .addGroup(jPanel2Layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jScrollPane3)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(btnAtualizar))
+                .addComponent(jScrollPane3))
         );
 
         jPanel3.setBorder(new javax.swing.border.SoftBevelBorder(javax.swing.border.BevelBorder.RAISED));
@@ -315,8 +308,9 @@ public class ClienteFrame extends javax.swing.JFrame {
     private void btnSairActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSairActionPerformed
         this.message.setAction(Action.DISCONNECT);
         this.service.send(this.message);
-        disconnect();
         
+        disconnected();
+
     }//GEN-LAST:event_btnSairActionPerformed
 
     private void btnConectarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnConectarActionPerformed
@@ -327,32 +321,39 @@ public class ClienteFrame extends javax.swing.JFrame {
             this.message.setAction(Action.CONNECT);
             this.message.setName(name);
 
-            if (this.socket == null) {
-                this.service = new ClienteService();
-                this.socket = this.service.connect();
+            this.service = new ClienteService();
+            this.socket = this.service.connect();
 
-                new Thread(new ListenerSocket(this.socket)).start();
+            new Thread(new ListenerSocket(this.socket)).start();
 
-            }
             this.service.send(message);
         }
+        this.txtAreaSend.setText("");
     }//GEN-LAST:event_btnConectarActionPerformed
 
     private void btnLimparActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLimparActionPerformed
-        // TODO add your handling code here:
+        this.txtAreaSend.setText("");
+
     }//GEN-LAST:event_btnLimparActionPerformed
 
     private void btnEnviarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEnviarActionPerformed
-        // TODO add your handling code here:
+        String text = this.txtAreaSend.getText();
+        String name = this.message.getName();
+        if (!text.isEmpty()) {
+
+            this.message = new ChatMessage();
+            this.message.setName(name);
+            this.message.setText(text);
+            this.message.setAction(Action.SEND_ALL);
+
+            this.txtAreaReceive.append("Você diz: " + text + "\n");
+
+            this.service.send(this.message);
     }//GEN-LAST:event_btnEnviarActionPerformed
-
-    private void btnAtualizarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAtualizarActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_btnAtualizarActionPerformed
-
+        this.txtAreaSend.setText("");
+    }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton btnAtualizar;
     private javax.swing.JButton btnConectar;
     private javax.swing.JButton btnEnviar;
     private javax.swing.JButton btnLimpar;

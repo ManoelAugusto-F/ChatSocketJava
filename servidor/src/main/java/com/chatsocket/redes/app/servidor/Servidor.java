@@ -15,8 +15,7 @@ import java.util.TimeZone;
 public class Servidor {
 
     public static void main(String[] args) {
-        
-        System.out.println("Servidor funcionando!" + ZonedDateTime.now());
+     
         new ServidorService();
 
     }
